@@ -1,0 +1,25 @@
+{
+    "name": "PinDrop",
+    "short_name": "PinDrop",
+    "description": "PinDrop allows you to securely share files with either devices on your network, or people on the internet. It has no size limit and is completely free to use.",
+    "categories": ["files", "sharing", "file sharing", "webrtc"],
+    "orientation": "portrait-primary",
+    "scope": "/",
+    "start_url": "/",
+    "background_color": "#202225",
+    "theme_color": "#202225",
+    "display": "fullscreen",
+    "icons": [
+        {
+            "src": "icon.webp",
+            "sizes": "any",
+            "type": "image/png"
+        },
+        {
+            "src": "mask.webp",
+            "sizes": "any",
+            "type": "image/png",
+            "purpose": "maskable"
+        }
+    ]
+}

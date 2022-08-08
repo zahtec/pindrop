@@ -1,0 +1,84 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    * {
+        -moz-osx-font-smoothing: grayscale;
+        -webkit-font-smoothing: antialiased;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    :root {
+        font-size: clamp(13px, 13px + 0.4vw, 18px);
+    }
+
+    #users {
+        scrollbar-width: none;
+    }
+
+    #users::-webkit-scrollbar {
+        width: 0;
+    }
+
+    /* Progress Bar */
+    .progress {
+        --percent: 0;
+        --color: #38acff;
+        background: conic-gradient(var(--color) calc(var(--percent) * 1%), transparent 0);
+    }
+}
+
+@layer utilities {
+    /* Blur */
+    .active {
+        @apply opacity-100 md:opacity-0 pointer-events-auto md:pointer-events-none;
+    }
+
+    /* Create Button Open */
+    #create-wrap.open {
+        @apply w-full right-0 top-0 h-full rounded-none z-40;
+    }
+
+    #menu.open {
+        @apply opacity-100 ease-in duration-300 pointer-events-auto;
+    }
+
+    #create-wrap.open > button {
+        @apply mr-6 mt-6 lg:mr-20;
+    }
+
+    #create-wrap.open > button > svg {
+        @apply rotate-45;
+    }
+
+    /* Confirmation Prompt */
+    .focus-send,
+    .focus-receive {
+        @apply scale-110 ease-out h-96 md:h-64 md:scale-100;
+    }
+
+    .focus-send > label,
+    .focus-receive > label {
+        @apply cursor-auto;
+    }
+
+    .focus-send > div:nth-child(2),
+    .focus-receive > div:nth-child(3) {
+        @apply opacity-100 pointer-events-auto;
+    }
+
+    /* Drag and Drop styling */
+    .drag .progress {
+        @apply opacity-100;
+    }
+
+    /* Scrollbar Remover */
+    .scrollbar-none {
+        scrollbar-width: none;
+    }
+
+    .scrollbar-none::-webkit-scrollbar {
+        display: none;
+    }
+}

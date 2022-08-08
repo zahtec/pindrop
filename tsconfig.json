@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "target": "ESNext",
+        "allowJs": true,
+        "forceConsistentCasingInFileNames": true,
+        "resolveJsonModule": true,
+        "skipLibCheck": true,
+        "noEmitOnError": true,
+        "noErrorTruncation": true,
+        "module": "esnext",
+        "moduleResolution": "node",
+        "removeComments": true,
+        "alwaysStrict": false,
+        "allowSyntheticDefaultImports": true,
+        "esModuleInterop": true,
+        "strict": true,
+        "outDir": "./public",
+        "lib": ["dom", "webWorker"]
+    },
+    "include": ["src/**/*"]
+}
