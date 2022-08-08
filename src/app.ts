@@ -14,8 +14,6 @@ const last = ['Bunny', 'Cat', 'Dog', 'Horse', 'Mouse', 'Pig', 'Rabbit', 'Turtle'
 // IP Room Schema: ID, User
 const db = new Map<String, Map<string, User>>();
 
-const home = readFileSync('pages/index.html', 'utf8');
-
 const app = express();
 
 app.disable('x-powered-by');
@@ -26,7 +24,7 @@ app.get('/robots.txt', (_, res) => res.status(404).send());
 
 app.get('/', (req, res) => {
     if (req.path !== '/') return res.redirect('/');
-    res.send(home);
+    res.sendFile('index.html', { root: 'dist/public' });
 });
 
 const server = app.listen(PORT, () => console.log(`Running on provided port ${PORT}`));
