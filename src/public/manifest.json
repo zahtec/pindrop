@@ -11,8 +11,8 @@
     "display": "fullscreen",
     "icons": [
         {
-            "src": "icon.webp",
-            "sizes": "any",
+            "src": "icon.png",
+            "sizes": "any, 512x512",
             "type": "image/png"
         },
         {

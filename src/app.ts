@@ -14,17 +14,19 @@ const last = ['Bunny', 'Cat', 'Dog', 'Horse', 'Mouse', 'Pig', 'Rabbit', 'Turtle'
 // IP Room Schema: ID, User
 const db = new Map<String, Map<string, User>>();
 
+const home = readFileSync('pages/index.html', 'utf8');
+
 const app = express();
 
 app.disable('x-powered-by');
 
-app.use(express.static('public'));
+app.use(express.static('dist/public'));
 
 app.get('/robots.txt', (_, res) => res.status(404).send());
 
 app.get('/', (req, res) => {
     if (req.path !== '/') return res.redirect('/');
-    res.send(readFileSync('pages/index.html', 'utf8'));
+    res.send(home);
 });
 
 const server = app.listen(PORT, () => console.log(`Running on provided port ${PORT}`));

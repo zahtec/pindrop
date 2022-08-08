@@ -5,7 +5,7 @@ self.addEventListener('install', e => {
         caches
             .open(`main-v${V}`)
             .then(cache => {
-                return cache.addAll(['/', '/globals.css', '/qr.js', '/zip.js', '/index.js', '/icon.webp', '/mask.webp']);
+                return cache.addAll(['/', '/globals.css', '/qr.js', '/zip.js', '/index.js', '/icon.png', '/mask.webp']);
             })
             .then(() => self.skipWaiting())
     );

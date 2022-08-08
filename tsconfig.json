@@ -14,8 +14,8 @@
         "allowSyntheticDefaultImports": true,
         "esModuleInterop": true,
         "strict": true,
-        "outDir": "./public",
+        "outDir": "dist",
         "lib": ["dom", "webWorker"]
     },
-    "include": ["src/**/*"]
+    "include": ["src/**/*.*"]
 }
