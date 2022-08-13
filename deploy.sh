@@ -6,4 +6,9 @@ git pull
 echo '🚧 Building with Docker...'
 docker compose up -d --build
 
-echo '🚀 Done!'
+if [ $? == 0 ]
+then
+  echo '🚀 Done!'
+else
+  echo '🚨 Error occured!'
+fi

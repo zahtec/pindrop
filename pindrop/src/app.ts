@@ -207,6 +207,12 @@ new WebSocketServer({
                 db.publish(`${msg.ip}:${msg.id}`, JSON.stringify({ type: msg.type, id, ip, data: msg.data }));
                 break;
             }
+
+            case 'heartbeat': {
+                // Keep WebSocket connection alive by using heartbeat
+
+                db.publish(`${ip}:${id}`, JSON.stringify({ type: 'heartbeat' }));
+            }
         }
     });
 

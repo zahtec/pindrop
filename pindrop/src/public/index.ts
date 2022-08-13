@@ -668,8 +668,12 @@ ws.onmessage = e => {
     }
 };
 
-// Send init message to server
-ws.onopen = () => ws.send(JSON.stringify({ type: 'init', cnid: code }));
+// Send init message to server and start heartbeat
+ws.onopen = () => {
+    ws.send(JSON.stringify({ type: 'init', cnid: code }));
+
+    setInterval(() => ws.send(JSON.stringify({ type: 'heartbeat' })), 5000);
+};
 
 // On offline
 ws.onerror = () => {
