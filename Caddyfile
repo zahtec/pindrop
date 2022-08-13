@@ -1,0 +1,7 @@
+# Change this to your domain/local address
+localhost {
+    encode gzip
+    reverse_proxy pindrop:8080 {
+        header_down Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+    }
+}

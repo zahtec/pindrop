@@ -1,0 +1,21 @@
+# fly.toml file generated for pindrop on 2022-08-11T21:21:09-07:00
+
+app = "pindrop"
+kill_signal = "SIGINT"
+kill_timeout = 30
+
+[deploy]
+  strategy = "rolling"
+
+[[services]]
+  internal_port = 8080
+  protocol = "tcp"
+
+  [[services.ports]]
+    force_https = true
+    handlers = ["http"]
+    port = 80
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443

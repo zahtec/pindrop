@@ -1,0 +1,35 @@
+services:
+    redis:
+        image: redis:alpine
+        restart: unless-stopped
+        container_name: redis
+
+    pindrop:
+        image: pindrop
+        build: ./pindrop
+        deploy:
+            mode: replicated
+            replicas: 2
+        restart: unless-stopped
+        volumes:
+            - caddy_data:/data
+        depends_on:
+            - redis
+
+    caddy:
+        image: caddy:alpine
+        restart: unless-stopped
+        container_name: caddy
+        ports:
+            - 80:80
+            - 443:443
+        volumes:
+            - ./Caddyfile:/etc/caddy/Caddyfile
+            - caddy_data:/data
+            - caddy_config:/config
+        depends_on:
+            - pindrop
+
+volumes:
+    caddy_data:
+    caddy_config:

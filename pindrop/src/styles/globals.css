@@ -55,7 +55,7 @@
     /* Confirmation Prompt */
     .focus-send,
     .focus-receive {
-        @apply scale-110 ease-out h-96 md:h-64 md:scale-100;
+        @apply scale-110 ease-out h-[27rem] md:h-64 md:scale-100;
     }
 
     .focus-send > label,

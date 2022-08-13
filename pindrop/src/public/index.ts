@@ -7,7 +7,7 @@ navigator.serviceWorker.register('sw.js', { type: 'module' });
 
 let connections: Connection[] = [];
 const code = new URLSearchParams(window.location.search).get('code');
-const ws = new WebSocket('ws://localhost:3000');
+const ws = new WebSocket(`wss://${window.location.host}`);
 const usersWrap = document.getElementById('users') as HTMLDivElement;
 const blur = document.getElementById('blur') as HTMLDivElement;
 const createButton = document.querySelector('#create-wrap > button') as HTMLButtonElement;
@@ -27,8 +27,8 @@ const updateCode = () => {
     const qr = menu.children[2] as HTMLImageElement;
     text.classList.add('opacity-0');
     setTimeout(async () => {
-        text.innerText = `https://pindrop.zahtec.com/?code=${roomCode}`;
-        qr.src = await QR.toDataURL(roomCode, { errorCorrectionLevel: 'L', color: { light: '#303134', dark: '#fff' }, type: 'image/webp', width: 350, margin: 0 });
+        text.innerText = window.location.href;
+        qr.src = await QR.toDataURL(window.location.href, { errorCorrectionLevel: 'L', color: { light: '#0000', dark: '#fff' }, type: 'image/webp', width: 350, margin: 0 });
         text.classList.remove('opacity-0');
         qr.classList.remove('opacity-0');
     }, 300);
@@ -37,14 +37,14 @@ const updateCode = () => {
 // Event listener for copying code to clipboard
 document.getElementById('copy')!.addEventListener('click', () => {
     if (!roomCode) return;
-    navigator.clipboard.writeText(`https://pindrop.zahtec.com/?code=${roomCode}`);
+    navigator.clipboard.writeText(window.location.href);
 });
 
 // Leave room
 document.getElementById('leave')!.addEventListener('click', () => {
     menu.classList.remove('open');
     createButton.parentElement!.classList.remove('open');
-    setTimeout(() => (window.location.href = 'https://pindrop.zahtec.com'), 300);
+    setTimeout(() => (window.location.href = `https://${window.location.host}`), 300);
 });
 
 createButton.addEventListener('click', () => {
@@ -74,7 +74,7 @@ const focus = (user: HTMLDivElement, fileName: string, type: string) => {
 
     const name = user.children[status ? 1 : 2].children[0] as HTMLParagraphElement;
 
-    name.innerText = name.innerText.replace('{FILE}', fileName);
+    name.innerText = name.innerText.replace('{FILE}', fileName.length > 20 ? `${fileName.slice(0, 20)}...` : fileName);
 };
 
 const unFocus = (user: HTMLDivElement, type: string) => {
@@ -131,14 +131,22 @@ class Connection {
     ip: string;
 
     constructor(id: string, ip: string) {
-        this.rtc = new RTCPeerConnection();
+        this.rtc = new RTCPeerConnection({
+            iceServers: [
+                {
+                    urls: ['stun:stun.l.google.com:19302', 'stun:stun2.l.google.com:19302']
+                }
+            ]
+        });
         this.state = 'offer';
         this.id = id;
         this.ip = ip;
 
+        this.rtc.onicecandidateerror = e => console.error(e);
+
         // Find all ice candidates then send offer. If we do it without all ice candidates the connection will fail
-        this.rtc.onicecandidate = () => {
-            if (this.rtc.iceGatheringState === 'complete') {
+        this.rtc.onicecandidate = e => {
+            if (this.rtc.iceGatheringState === 'complete' || !e.candidate) {
                 ws.send(JSON.stringify({ type: this.state, data: this.rtc.localDescription, id: this.id, ip: this.ip }));
             }
         };
@@ -225,6 +233,7 @@ class Connection {
                     info = ['', 0, 0];
                     stage = 0;
                     current = 0;
+                    user.children[0].classList.remove('cursor-auto');
                     fileSelect.disabled = false;
                     fileSelect.value = '';
                     progressBar.classList.add('opacity-0');
@@ -263,7 +272,7 @@ const upload = (fileSelect: HTMLInputElement, user: HTMLDivElement, msg: WSMessa
     sendPopup[0].innerText = `Are you sure you want to send "{FILE}" to ${msg.name}?`;
 
     // Send Confirmation
-    focus(user, file.name, 'focus-send');
+    focus(user, fileSelect.files!.length > 1 ? 'pindrop-files.zip' : file.name, 'focus-send');
     fileSelect.disabled = true;
 
     // Check for user confirmation, if cancel, revert animaions and cancel
@@ -447,13 +456,14 @@ ws.onmessage = e => {
         }
 
         case 'new-user': {
+            if (document.getElementById(`${msg.ip}:${msg.id}`)) return;
             usersWrap.insertAdjacentHTML(
                 'beforeend',
                 `<div id="${msg.ip}:${msg.id}" class="h-40 w-full mb-10 md:mb-5 flex items-center md:items-start flex-col duration-500 transition-user opacity-0 translate-y-3 relative overflow-hidden">
                     <label class="flex items-center flex-col md:flex-row cursor-pointer mt-2 md:ml-[33%]" tabindex="0">
                         <input type="file" class="hidden" multiple>
                         <div class="relative">
-                            <div class="bg-accent p-4 rounded-xl drop-shadow-lg w-min">
+                            <div class="bg-accent-light dark:bg-accent text-white p-4 rounded-xl drop-shadow-lg w-min">
                                 ${Icons[msg.device!]}
                             </div>
                             <div class="progress absolute opacity-0 transition-opacity duration-300 -top-2 -left-2 -right-2 -bottom-2 rounded-2xl -z-10"></div>
@@ -461,17 +471,17 @@ ws.onmessage = e => {
                         <h1 class="mt-4 text-center md:ml-6 md:mt-0">${msg.name}</h1>
                     </label>
                     <div class="text-center absolute md:justify-center md:flex md:flex-col md:h-full top-40 md:top-12 opacity-0 duration-500 transition-tropacity pointer-events-none md:ml-[33%]">
-                        <p>Are you sure you want to send "{FILE}" to ${msg.name}?</p>
-                        <div class="md:flex">
+                        <p class="px-4">Are you sure you want to send "{FILE}" to ${msg.name}?</p>
+                        <div class="text-white md:flex">
                             <button class="flex justify-center items-center p-4 rounded-md bg-blue w-48 mt-8 mx-auto md:h-12 md:mt-4" tabindex="-1">Send</button>
-                            <button class="flex justify-center items-center p-4 rounded-md bg-accent w-48 mt-4 mx-auto md:h-12 md:ml-4" tabindex="-1">Cancel</button>
+                            <button class="flex justify-center items-center p-4 rounded-md bg-accent-light dark:bg-accent w-48 mt-4 mx-auto md:h-12 md:ml-4" tabindex="-1">Cancel</button>
                         </div>
                     </div>
                     <div class="text-center absolute md:justify-center md:flex md:flex-col md:h-full top-40 md:top-12 opacity-0 duration-500 transition-tropacity pointer-events-none md:ml-[33%]">
-                        <p>${msg.name} wants to send you "{FILE}"</p>
-                        <div class="md:flex">
+                        <p class="px-4">${msg.name} wants to send you "{FILE}"</p>
+                        <div class="text-white md:flex">
                             <button class="flex justify-center items-center p-4 rounded-md bg-blue w-48 mt-8 mx-auto md:h-12 md:mt-4" tabindex="-1">Accept</button>
-                            <button class="flex justify-center items-center p-4 rounded-md bg-accent w-48 mt-4 mx-auto md:h-12 md:ml-4" tabindex="-1">Decline</button>
+                            <button class="flex justify-center items-center p-4 rounded-md bg-accent-light dark:bg-accent w-48 mt-4 mx-auto md:h-12 md:ml-4" tabindex="-1">Decline</button>
                         </div>
                     </div>
                 </div>`

@@ -8,7 +8,7 @@
     "start_url": "/",
     "background_color": "#202225",
     "theme_color": "#202225",
-    "display": "fullscreen",
+    "display": "standalone",
     "icons": [
         {
             "src": "icon.png",

@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-    content: ['src/**/*.{ts,css}', 'pages/index.html'],
+    content: ['src/**/*.{ts,css,html}'],
     output: 'public/globals.css',
     theme: {
         extend: {
@@ -9,7 +9,10 @@ module.exports = {
             },
             colors: {
                 main: '#202225',
-                accent: '#303134',
+                accent: {
+                    DEFAULT: '#303134',
+                    light: '#87888a'
+                },
                 hover: '#8b8b8c',
                 blue: '#38ACFF'
             },
