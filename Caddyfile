@@ -2,6 +2,6 @@
 localhost {
     encode gzip
     reverse_proxy pindrop:8080 {
-        header_down Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+        header_down Strict-Transport-Security "max-age=15780000; includeSubDomains; preload"
     }
 }
