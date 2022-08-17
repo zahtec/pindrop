@@ -17,6 +17,7 @@ const db = new Redis({
     family: process.env.FLY_APP_NAME ? 6 : 4
 });
 
+// Flush all data on restart
 db.flushall();
 
 app.disable('x-powered-by');
@@ -70,7 +71,9 @@ new WebSocketServer({
     server
 }).on('connection', async (ws, req) => {
     // Created a hashed IP that may be reassigned to a cnid later on
-    let ip = createHash('sha256').update(req.socket.remoteAddress!).digest('base64');
+    let ip = createHash('sha256')
+        .update(process.env.FLY_APP_NAME ? (req.headers['fly-client-ip'] as string) : req.socket.remoteAddress!)
+        .digest('base64');
     // Generate ID for user and if it exists in given IP Room, regen ID
     const id = await genIPID(await db.hgetall(ip));
     // Generate a random semantic name
