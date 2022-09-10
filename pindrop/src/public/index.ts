@@ -125,7 +125,7 @@ const startConnection = (id: string, ip: string): Promise<RTCDataChannel> | unde
 class Connection {
     rtc: RTCPeerConnection;
     dc?: RTCDataChannel;
-    buffer?: ArrayBuffer[];
+    buffer: ArrayBuffer[];
     state: 'offer' | 'answer';
     id: string;
     ip: string;
@@ -141,8 +141,7 @@ class Connection {
         this.state = 'offer';
         this.id = id;
         this.ip = ip;
-
-        this.rtc.onicecandidateerror = e => console.error(e);
+        this.buffer = [];
 
         // Find all ice candidates then send offer. If we do it without all ice candidates the connection will fail
         this.rtc.onicecandidate = e => {
@@ -193,8 +192,7 @@ class Connection {
 
     message() {
         let stage = 0;
-        let current = 0;
-        let info: [string, number, number];
+        let info: [string, number];
 
         // Reference to current elements
         const user = document.getElementById(`${this.ip}:${this.id}`) as HTMLLabelElement;
@@ -202,37 +200,36 @@ class Connection {
         const progressBar = user.children[0].children[1].children[1] as HTMLDivElement;
 
         this.dc!.onmessage = async ({ data }) => {
-            if (!stage) {
-                // Split init message 0 is filename, 1 is chunk amount, 2 is file size
-                const split = data.split(':');
-                info = [split[0], Number.parseInt(split[1]), Number.parseInt(split[2])];
+            if (data === 'done') return;
 
-                // Show progress bar
-                progressBar.classList.remove('opacity-0');
+            switch (stage) {
+                // Receive file info (init message)
+                case 0: {
+                    // Split init message 0 is filename, 1 is chunk amount
+                    const split = data.split(':');
+                    info = [split[0], Number.parseInt(split[1])];
 
-                // Change name back to normal
-                const name = user.children[0].children[2] as HTMLParagraphElement;
-                name.innerText = name.innerText.split('.')[0].split('to ')[1];
+                    // Show progress bar
+                    progressBar.classList.remove('opacity-0');
 
-                // create uint8 array with byte size of file
-                this.buffer = [];
+                    // Change name back to normal
+                    const name = user.children[0].children[2] as HTMLParagraphElement;
+                    name.innerText = name.innerText.split('.')[0].split('to ')[1];
+                    break;
+                }
 
-                stage++;
-            } else {
-                // Append buffer to Uint8Array by keeping track of byte length and setting the offset to all previous bytelengths combined
-                this.buffer!.push(data);
-                current += data.byteLength;
+                // Check if buffer is file size, if yes, send confirmation message and download
+                case info[1]: {
+                    // Add last chunk to buffer
+                    this.buffer.push(data);
 
-                // Update progress bar
-                progressBar.style.setProperty('--percent', Math.round((current / info[2]) * 100).toString());
+                    // Send done message so peer can re-enable file sending
+                    this.dc!.send('done');
 
-                // Check if buffer is file size, if yes, thats the last chunk
-                if (stage === info[1]) {
                     // download and reset all information for next file
                     this.download(info[0] as string);
-                    info = ['', 0, 0];
+                    info = ['', 0];
                     stage = 0;
-                    current = 0;
                     user.children[0].classList.remove('cursor-auto');
                     fileSelect.disabled = false;
                     fileSelect.value = '';
@@ -242,8 +239,17 @@ class Connection {
                     return;
                 }
 
-                stage++;
+                // Default, receive a chunk
+                default: {
+                    // Append buffer to Uint8Array by keeping track of byte length and setting the offset to all previous bytelengths combined
+                    this.buffer.push(data);
+
+                    // Update progress bar
+                    progressBar.style.setProperty('--percent', Math.round((stage / info[1]) * 100).toString());
+                }
             }
+
+            stage++;
         };
     }
 
@@ -253,7 +259,7 @@ class Connection {
         a.download = filename;
         a.click();
 
-        this.buffer = undefined;
+        this.buffer = [];
     }
 }
 
@@ -295,16 +301,15 @@ const upload = (fileSelect: HTMLInputElement, user: HTMLDivElement, msg: WSMessa
                 progressBar.style.setProperty('--percent', '50');
                 progressBar.classList.remove('opacity-0');
 
-                const zipFileWriter = new TransformStream();
-                const zipPromise = new Response(zipFileWriter.readable).blob();
-                const zipWriter = new Zip.ZipWriter(zipFileWriter);
+                const zip = new Zip();
 
-                Array.from((fileSelect.files ?? f)!).forEach(async file => await zipWriter.add(file.name, { readable: file.stream() }));
+                Array.from((fileSelect.files ?? f)!).forEach(async file => zip.file(file.name, file));
 
-                await zipWriter.close();
+                const result = await zip.generateAsync({ type: 'blob' });
+
                 progressBar.style.setProperty('--percent', '100');
                 progressBar.classList.add('opacity-0');
-                file = new File([await zipPromise], 'pindrop-files.zip');
+                file = new File([result], 'pindrop-files.zip');
             }
 
             name.innerText = `Waiting for ${msg.name} to accept...`;
@@ -370,15 +375,9 @@ const upload = (fileSelect: HTMLInputElement, user: HTMLDivElement, msg: WSMessa
                     const sender = async () => {
                         const chunkData = (await data.next()).value as ArrayBuffer;
 
-                        // Once all chunks have been sent, stop event listener and allow other files to be sent
+                        // Once all chunks have been sent, stop event listener and wait for a confirmation message
                         if (!chunkData) {
                             dc!.removeEventListener('bufferedamountlow', sender);
-                            fileSelect.disabled = false;
-                            fileSelect.value = '';
-                            label.classList.remove('cursor-auto');
-                            label.tabIndex = 0;
-                            progressBar.classList.add('opacity-0');
-                            setTimeout(() => progressBar.style.setProperty('--percent', '0'), 300);
                             return;
                         }
 
@@ -389,10 +388,24 @@ const upload = (fileSelect: HTMLInputElement, user: HTMLDivElement, msg: WSMessa
                     };
 
                     // Send first chunk with name and file size
-                    dc!.send(`${file.name}:${chunks}:${file.size}`);
+                    dc!.send(`${file.name}:${chunks}`);
 
                     // Add event listener to repeatadly send chunks once the buffer is free
                     dc!.addEventListener('bufferedamountlow', sender);
+
+                    // Check for a confirmation message to allow other files to be sent
+                    const confirmation = ({ data }: MessageEvent) => {
+                        if (data !== 'done') return;
+                        dc!.removeEventListener('message', confirmation);
+                        fileSelect.disabled = false;
+                        fileSelect.value = '';
+                        label.classList.remove('cursor-auto');
+                        label.tabIndex = 0;
+                        progressBar.classList.add('opacity-0');
+                        setTimeout(() => progressBar.style.setProperty('--percent', '0'), 300);
+                    };
+
+                    dc!.addEventListener('message', confirmation);
 
                     // show progress bar
                     progressBar.classList.remove('opacity-0');
@@ -678,15 +691,27 @@ ws.onopen = () => {
     intID = setInterval(() => ws.send(JSON.stringify({ type: 'heartbeat' })), 5000);
 };
 
-// On offline
-ws.onerror = () => {
+// Cleanup once an erorr occurs of the websocket is close
+const cleanup = () => {
     createButton.disabled = true;
+
     const name = document.getElementById('name') as HTMLDivElement;
     name.classList.add('opacity-0');
+
+    usersWrap.classList.add('opacity-0');
+
+    setTimeout(() => {
+        usersWrap.innerHTML = '';
+    }, 300);
+
     setTimeout(() => {
         name.innerText = 'You are offline, please connect to the internet';
         name.classList.remove('opacity-0');
     }, 300);
+
+    intID && clearInterval(intID);
 };
 
-ws.onclose = () => intID && clearInterval(intID);
+// On offline/close
+ws.onerror = cleanup;
+ws.onclose = cleanup;

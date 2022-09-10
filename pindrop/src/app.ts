@@ -82,6 +82,8 @@ new WebSocketServer({
     const device = getDevice(req.headers['user-agent']);
     // Create redis subscriber
     const sub = db.duplicate();
+    // Track if ws is closed
+    let closed = false;
 
     ws.on('message', async e => {
         const msg = JSON.parse(e.toString());
@@ -214,12 +216,24 @@ new WebSocketServer({
             case 'heartbeat': {
                 // Keep WebSocket connection alive by using heartbeat
 
-                db.publish(`${ip}:${id}`, JSON.stringify({ type: 'heartbeat' }));
+                // Pub/Sub isnt used here because heartbeats will only be needed to the connected server
+                closed = false;
+                ws.send(JSON.stringify({ type: 'heartbeat' }));
             }
         }
     });
 
+    // Check if connection is still alive
+    const interval = setInterval(() => {
+        if (closed) return ws.close();
+
+        closed = true;
+    }, 7000);
+
     ws.on('close', async () => {
+        // Clear heartbeat interval
+        clearInterval(interval);
+
         // Get the IP room the client is in
         const room = await db.hgetall(ip);
         if (!room) return;
